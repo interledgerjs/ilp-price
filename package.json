@@ -1,0 +1,19 @@
+{
+  "name": "ilp-price",
+  "version": "1.0.0",
+  "description": "Fetch price info for currency-agnostic apps on Interledger",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sharafian/ilp-price.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sharafian/ilp-price/issues"
+  },
+  "homepage": "https://github.com/sharafian/ilp-price#readme"
+}
