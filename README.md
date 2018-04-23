@@ -7,6 +7,7 @@
   - [As Environment Variable](#environment-variable)
   - [As File](#file)
 - [Examples](#examples)
+- [TODOs](#todos)
 
 ## Overview
 
@@ -133,3 +134,8 @@ const price = new Price()
 
 })()
 ```
+
+## TODOs
+
+- [ ] Handle livenet vs. testnet vs. others
+- [ ] Use up-to-date transport protocol

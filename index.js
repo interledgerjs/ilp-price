@@ -2,6 +2,8 @@ const fs = require('fs-extra')
 const makePlugin = require('ilp-plugin')
 const defaultLandmarks = require('./landmarks.json')
 const ILDCP = require('ilp-protocol-ildcp')
+const SPSP = require('ilp-protocol-spsp')
+const PSK2 = require('ilp-protocol-psk2')
 const BigNumber = require('bignumber.js')
 const debug = require('debug')('ilp-price')
 
@@ -43,12 +45,36 @@ class Price {
     this._landmarks = defaultLandmarks
     return this._landmarks
   }
+
+  _scaleAmount(amount, scale) {
+    return new BigNumber(amount).times(Math.pow(10, scale)).toString()
+  }
+
+  _validateResponse(currency, response) {
+    if (!response.ledgerInfo) {
+      throw new Error('response.ledger_info must be defined')
+    }
+
+    if (typeof response.ledgerInfo !== 'object') {
+      throw new Error('response.ledger_info must be an object')
+    }
+
+    if (response.ledgerInfo.assetCode !== currency) {
+      throw new Error('response.ledger_info.asset_code must match currency. ' +
+        'asset_code=' + response.ledgerInfo.assetCode + ' ' +
+        'currency=' + currency)
+    }
+
+    if (typeof response.ledgerInfo.assetScale !== number) {
+      throw new Error('response.ledger_info.asset_scae must be number.')
+    }
+  }
  
   async fetch (currency, amount) {
     const details = await ILDCP.fetch(this._plugin.sendData.bind(this._plugin))
 
     if (assetCode === currency) {
-      return new BigNumber(amount).times(Math.pow(10, assetScale)).toString()
+      return this._scaleAmount(amount, details.assetScale)
     }
 
     const landmarks = (await this._getLandmarks())[currency]
@@ -60,8 +86,33 @@ class Price {
     }
 
     for (const landmark of landmarks) {
-      // TODO
+      try {
+        const response = await SPSP.query(landmark)
+        this._validateResponse(currency, response)
+
+        // TODO: update to STREAM once available
+        const sourceAmount = '1000'
+        const { destinationAmount } = await PSK2.quoteSourceAmount(this._plugin, {
+          ...response,
+          sourceAmount
+        })
+
+        const convertedAmount = new BigNumber(destinationAmount)
+          .div(sourceAmount)
+          .times(amount)
+
+        return this._scaleAmount(convertedAmount, response.ledgerInfo.assetScale)
+      } catch (e) {
+        debug('landmark lookup failed. falling back to next.',
+          'landmark=' + landmark,
+          'error=' + e.message)
+        continue
+      }
     }
+
+    debug('all landmarks failed. currency=' + currency,
+      'landmarks=', landmarks)
+    throw new Error('all landmarks failed. currency=' + currency)
   }
 }
 
