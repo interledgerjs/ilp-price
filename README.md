@@ -139,3 +139,4 @@ const price = new Price()
 
 - [ ] Handle livenet vs. testnet vs. others
 - [ ] Use up-to-date transport protocol
+- [ ] More landmarks for more currencies
