@@ -123,8 +123,13 @@ const price = new Price()
   //   - Landmarks under 'USD', in order. If one fails it falls back to the
   //   next.
 
-  const twoCents = await price.get('USD', 0.02)
-  const oneXrp = await price.get('XRP', 1)
+  const twoCents = await price.fetch('USD', 0.02)
+  const oneXrp = await price.fetch('XRP', 1)
+
+  // You can bind price.fetch to create a convenience function, if you plan to
+  // do everything in one currency.
+
+  const toUsd = price.fetch.bind(price, 'USD')
 
 })()
 ```
