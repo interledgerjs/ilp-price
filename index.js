@@ -7,20 +7,20 @@ const PSK2 = require('ilp-protocol-psk2')
 const BigNumber = require('bignumber.js')
 const debug = require('debug')('ilp-price')
 
-const mergeLandmarks = function (map, update) {
-  for (const key of Object.keys(update)) {
-    if (map[key]) {
-      Object.assign(map[key], update[key])
-    } else {
-      map[key] = update[key]
-    }
-  }
-}
-
 class Price {
   constructor (opts = {}) {
     this._plugin = opts.plugin || makePlugin()
-    this._landmarksOpt = opts.landmark
+    this._landmarksOpt = opts.landmarks
+  }
+
+  mergeLandmarks (map, update) {
+    for (const key of Object.keys(update)) {
+      if (map[key]) {
+        Object.assign(map[key], update[key])
+      } else {
+        map[key] = update[key]
+      }
+    }
   }
 
   async _getLandmarks () {
@@ -35,7 +35,7 @@ class Price {
     if (envFile) {
       debug('loading landmarks from file. file=' + envFile)
       try {
-        mergeLandmarks(this._landmarks, await fs.readJson(envFile))
+        this.mergeLandmarks(this._landmarks, await fs.readJson(envFile))
       } catch (e) {
         debug('error loading landmarks from file. error=' + e.message)
       }
@@ -46,7 +46,7 @@ class Price {
     if (envJson) {
       debug('loading landmarks from "ILP_PRICE_LANDMARKS". json=', envJson)
       try {
-        mergeLandmarks(this._landmarks, JSON.parse(envJson))
+        this.mergeLandmarks(this._landmarks, JSON.parse(envJson))
       } catch (e) {
         debug('error loading landmarks from env. error=' + e.message)
       }
@@ -55,7 +55,7 @@ class Price {
     // finally apply constructor opts if available
     if (this._landmarksOpt) {
       debug('loading landmarks from constructor options')
-      mergeLandmarks(this._landmarks, this._landmarksOpt)
+      this.mergeLandmarks(this._landmarks, this._landmarksOpt)
     }
 
     // return final result of application
@@ -87,6 +87,7 @@ class Price {
   }
 
   async fetch (currency, amount) {
+    await this._plugin.connect()
     const details = await ILDCP.fetch(this._plugin.sendData.bind(this._plugin))
 
     if (details.assetCode === currency) {
@@ -124,8 +125,8 @@ class Price {
           sourceAmount
         })
 
-        const convertedAmount = new BigNumber(destinationAmount)
-          .div(sourceAmount)
+        const convertedAmount = new BigNumber(sourceAmount)
+          .div(destinationAmount)
           .times(amount)
 
         return this._scaleAmount(convertedAmount, response.ledgerInfo.assetScale)
