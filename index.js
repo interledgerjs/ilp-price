@@ -7,6 +7,16 @@ const PSK2 = require('ilp-protocol-psk2')
 const BigNumber = require('bignumber.js')
 const debug = require('debug')('ilp-price')
 
+const mergeLandmarks = function (map, update) {
+  for (const key of Object.keys(update)) {
+    if (map[key]) {
+      Object.assign(map[key], update[key])
+    } else {
+      map[key] = update[key]
+    }
+  }
+}
+
 class Price {
   constructor (opts = {}) {
     this._plugin = opts.plugin || makePlugin()
@@ -25,7 +35,7 @@ class Price {
     if (envFile) {
       debug('loading landmarks from file. file=' + envFile)
       try {
-        Object.assign(this._landmarks, await fs.readJson(envFile))
+        mergeLandmarks(this._landmarks, await fs.readJson(envFile))
       } catch (e) {
         debug('error loading landmarks from file. error=' + e.message)
       }
@@ -36,7 +46,7 @@ class Price {
     if (envJson) {
       debug('loading landmarks from "ILP_PRICE_LANDMARKS". json=', envJson)
       try {
-        Object.assign(this._landmarks, JSON.parse(envJson))
+        mergeLandmarks(this._landmarks, JSON.parse(envJson))
       } catch (e) {
         debug('error loading landmarks from env. error=' + e.message)
       }
@@ -45,7 +55,7 @@ class Price {
     // finally apply constructor opts if available
     if (this._landmarksOpt) {
       debug('loading landmarks from constructor options')
-      Object.assign(this._landmarks, this._landmarksOpt)
+      mergeLandmarks(this._landmarks, this._landmarksOpt)
     }
 
     // return final result of application

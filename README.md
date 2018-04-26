@@ -100,25 +100,91 @@ through one landmark, then another one is tried.
 
 If all landmarks return errors, an error is thrown.
 
+### Merging Landmarks
+
+Because landmarks are loaded from many sources, there needs to be a way to
+merge this information.  The [prefix maps](#prefix-map) and [currency
+maps](#currency-map) are merged, but the [landmark lists](#landmark-list) are
+not.
+
+For example, let's say we have two landmark specifications.
+
+Landmark spec A:
+
+```js
+{
+  "g.": {
+    "XRP": [
+      "$a.example",
+      "$b.example"
+    ],
+    "USD": [
+      "$c.example",
+      "$d.example",
+      "$e.example"
+    ]
+  },
+  "test.": {
+    "XRP": [
+      "$f.example"
+    ]
+  }
+}
+```
+
+Landmark spec B:
+
+```
+{
+  "g.": {
+    "XRP": [
+      "$g.example"
+    ]
+  },
+  "private.": {
+    "XRP": [
+      "$localhost"
+    ]
+  }
+}
+```
+
+If we merge landmark spec B into landmark spec A, we get the following result:
+
+```js
+{
+  "test.": {
+    "XRP": [
+      "$g.example"
+    ],
+    "USD": [
+      "$c.example",
+      "$d.example",
+      "$e.example"
+    ]
+  }
+  "private.": {
+    "XRP": [
+      "$localhost"
+    ]
+  }
+}
+```
+
 ### As Environment Variable
 
 You can pass in an alternative landmark specification via the environment variable
 `ILP_PRICE_LANDMARKS`. This variable should be a string containing JSON, [in the
 format specified above](#json-format).
 
-If provided, this list will be assigned to the default landmark specification
-via
-[`Object.assign()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/assign).
-This is applied at the prefix map level.
-
-For example, if you specify the key `g.`, entries for `test.` will not be
-overwritten. However, all currencies under `g.` will be overwritten.
-
 Example:
 
 ```
 export ILP_PRICE_LANDMARKS='{"g.":{"XRP":["$xrp-landmark.example.com","$other.example.com","https://raw-spsp-endpoint.example.com"],"USD":["$usd-landmark.example.com"]}}'
 ```
+
+If provided, this list will be [merged](#merging-landmarks) into the default
+landmarks.
 
 ### As File
 
@@ -127,21 +193,19 @@ specify this file via the environment variable `ILP_PRICE_LANDMARKS_FILE`.  It
 should contain a string with the file's path. If this path is relative, then it
 is read relative to the current working directory.
 
-First, this file will be
-[`Object.assign()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/assign)'d
-to the default landmark specification.
-
-If `ILP_PRICE_LANDMARKS` is defined, then it will be assigned to the result of that first assignment.
-So the order of application goes:
-
-```
-default -> ILP_PRICE_LANDMARKS_FILE -> ILP_PRICE_LANDMARKS -> constructor
-```
-
 Example:
 
 ```
 export ILP_PRICE_LANDMARKS_FILE='/home/bob/my_price_infomation_file.json'
+```
+
+This file will be [merged](#merging-landmarks) into the default landmarks. If `ILP_PRICE_LANDMARKS` is specified,
+it will be merged into the result of that operation.
+
+The order of application goes:
+
+```
+default -> ILP_PRICE_LANDMARKS_FILE -> ILP_PRICE_LANDMARKS -> constructor
 ```
 
 ## Examples
