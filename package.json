@@ -4,7 +4,7 @@
   "description": "Fetch price info for currency-agnostic apps on Interledger",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "nyc --reporter=lcov mocha --",
     "lint": "eslint ."
   },
   "repository": {
@@ -27,11 +27,15 @@
     "ilp-protocol-spsp": "^2.0.0"
   },
   "devDependencies": {
+    "chai": "^4.1.2",
     "eslint": "^4.19.1",
     "eslint-config-standard": "^11.0.0",
     "eslint-plugin-import": "^2.11.0",
     "eslint-plugin-node": "^6.0.1",
     "eslint-plugin-promise": "^3.7.0",
-    "eslint-plugin-standard": "^3.1.0"
+    "eslint-plugin-standard": "^3.1.0",
+    "mocha": "^5.1.1",
+    "nyc": "^11.7.1",
+    "sinon": "^4.5.0"
   }
 }
