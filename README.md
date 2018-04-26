@@ -4,6 +4,9 @@
 - [Overview](#overview)
 - [Specify Your Own Landmarks](#specify-your-own-landmarks)
   - [JSON Format](#json-format)
+    - [Prefix Map](#prefix-map)
+    - [Currency Map](#currency-map)
+    - [Landmark List](#landmark-list)
   - [As Environment Variable](#environment-variable)
   - [As File](#file)
 - [Examples](#examples)
@@ -37,37 +40,84 @@ Landmarks for `ilp-price` are specified in the following format:
 
 ```js
 {
-  "XRP": [
-    "$xrp-landmark.example.com",
-    "$other.example.com",
-    "https://raw-spsp-endpoint.example.com",
+  "g.": {
+    "XRP": [
+      "$xrp-landmark.example.com",
+      "$other.example.com",
+      "https://raw-spsp-endpoint.example.com",
+      // ...
+    ],
+    "USD": [
+      "$usd-landmark.example.com",
+      // ...
+    ],
     // ...
-  ],
-  "USD": [
-    "$usd-landmark.example.com",
-    // ...
-  ],
+  },
+  "test.": {
+    "XRP": [
+      "$spsp.ilp-test.com"
+    ]
+  },
   // ...
 }
 ```
 
-The outer object is a map from currency codes to lists of [SPSP
+The landmark specification is made up of three levels.
+
+- Prefix map
+- Currency map
+- Landmark list
+
+#### Prefix Map
+
+The outermost object contains ILP address prefixes. When you ask for a price,
+an [ILDCP](https://github.com/interledgerjs/ilp-protocol-ildcp) lookup is made,
+and the address is compared against the keys of this map.
+
+The longest key which is a prefix of the address is selected. The value under
+that key is then used as the currency map.
+
+If no keys are prefixes of your ILP address, an error should be thrown.
+
+#### Currency Map
+
+The currency map maps currency codes to landmark lists. A simple lookup is done
+with the desired currency of your price lookup. The value associated with that
+currency code is used as the landmark list.
+
+If the desired currency code is not present, an error should be thrown.
+
+#### Landmark List
+
+The landmark lists are lists of [SPSP
 receivers](https://github.com/interledger/rfcs/blob/master/0009-simple-payment-setup-protocol/0009-simple-payment-setup-protocol.md).
 These receivers can be listed as raw HTTP(s) endpoints, or as [Payment
 Pointers](https://github.com/interledger/rfcs/blob/master/0026-payment-pointers/0026-payment-pointers.md)
 
+The landmark list is used to fetch an actual exchange rate by using the
+Interledger network and a transport protocol. If the rate cannot be retrieved
+through one landmark, then another one is tried.
+
+If all landmarks return errors, an error is thrown.
+
 ### As Environment Variable
 
-You can pass in an alternative list of landmarks via the environment variable
+You can pass in an alternative landmark specification via the environment variable
 `ILP_PRICE_LANDMARKS`. This variable should be a string containing JSON, [in the
 format specified above](#json-format).
 
-If provided, this list will replace the default one inside the module.
+If provided, this list will be assigned to the default landmark specification
+via
+[`Object.assign()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/assign).
+This is applied at the prefix map level.
+
+For example, if you specify the key `g.`, entries for `test.` will not be
+overwritten. However, all currencies under `g.` will be overwritten.
 
 Example:
 
 ```
-export ILP_PRICE_LANDMARKS='{"XRP":["$xrp-landmark.example.com","$other.example.com","https://raw-spsp-endpoint.example.com"],"USD":["$usd-landmark.example.com"]}'
+export ILP_PRICE_LANDMARKS='{"g.":{"XRP":["$xrp-landmark.example.com","$other.example.com","https://raw-spsp-endpoint.example.com"],"USD":["$usd-landmark.example.com"]}}'
 ```
 
 ### As File
@@ -77,8 +127,16 @@ specify this file via the environment variable `ILP_PRICE_LANDMARKS_FILE`.  It
 should contain a string with the file's path. If this path is relative, then it
 is read relative to the current working directory.
 
-If this is specified alongside `ILP_PRICE_LANDMARKS`, then
-`ILP_PRICE_LANDMARKS` will take precedent and the file will not be read.
+First, this file will be
+[`Object.assign()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/assign)'d
+to the default landmark specification.
+
+If `ILP_PRICE_LANDMARKS` is defined, then it will be assigned to the result of that first assignment.
+So the order of application goes:
+
+```
+default -> ILP_PRICE_LANDMARKS_FILE -> ILP_PRICE_LANDMARKS -> constructor
+```
 
 Example:
 
@@ -91,9 +149,10 @@ export ILP_PRICE_LANDMARKS_FILE='/home/bob/my_price_infomation_file.json'
 ```js
 const Price = require('ilp-price')
 
-// Landmarks can be passed in explicitly; this overrides the defaults and all
-// environment variables. This is generally not a good idea, though, unless
-// you're populating the list from a source that can be updated over time.
+// Landmarks can be passed in explicitly; this is applied after the defaults
+// and after all environment variables. This is generally not a good idea,
+// though, unless you're populating the list from a source that can be updated
+// over time.
 const customPrice1 = new Price({
   landmarks: {
     "XRP": [
@@ -137,6 +196,6 @@ const price = new Price()
 
 ## TODOs
 
-- [ ] Handle livenet vs. testnet vs. others
+- [x] Handle livenet vs. testnet vs. others
 - [ ] Use up-to-date transport protocol
 - [ ] More landmarks for more currencies

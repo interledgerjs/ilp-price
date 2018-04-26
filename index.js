@@ -17,40 +17,46 @@ class Price {
     // cache list to avoid parse every time
     if (this._landmarks) return this._landmarks
 
-    // constructor opts takes highest priority
-    if (this._landmarksOpt) {
-      debug('loading landmarks from constructor options')
-      this._landmarks = this._landmarksOpt
-      return this._landmarks
-    }
+    // start with the defaults
+    this._landmarks = defaultLandmarks
 
-    // next highest is JSON string in environment
-    const envJson = process.env.ILP_PRICE_LANDMARKS
-    if (envJSON) {
-      debug('loading landmarks from "ILP_PRICE_LANDMARKS". json=', envJson)
-      this._landmarks = JSON.parse(envJson)
-      return this._landmarks
-    }
-
-    // next highest is file specified in environment
+    // if file is specified, apply it
     const envFile = process.env.ILP_PRICE_LANDMARKS_FILE
     if (envFile) {
       debug('loading landmarks from file. file=' + envFile)
-      this._landmarks = await fs.readJson(envFile)
-      return this._landmarks
+      try {
+        Object.assign(this._landmarks, await fs.readJson(envFile))
+      } catch (e) {
+        debug('error loading landmarks from file. error=' + e.message)
+      }
     }
 
-    // lowest priority is defaults
-    debug('loading default landmarks.')
-    this._landmarks = defaultLandmarks
+    // if env is specified, apply it after file
+    const envJson = process.env.ILP_PRICE_LANDMARKS
+    if (envJson) {
+      debug('loading landmarks from "ILP_PRICE_LANDMARKS". json=', envJson)
+      try {
+        Object.assign(this._landmarks, JSON.parse(envJson))
+      } catch (e) {
+        debug('error loading landmarks from env. error=' + e.message)
+      }
+    }
+
+    // finally apply constructor opts if available
+    if (this._landmarksOpt) {
+      debug('loading landmarks from constructor options')
+      Object.assign(this._landmarks, this._landmarksOpt)
+    }
+
+    // return final result of application
     return this._landmarks
   }
 
-  _scaleAmount(amount, scale) {
+  _scaleAmount (amount, scale) {
     return new BigNumber(amount).times(Math.pow(10, scale)).toString()
   }
 
-  _validateResponse(currency, response) {
+  _validateResponse (currency, response) {
     if (!response.ledgerInfo) {
       throw new Error('response.ledger_info must be defined')
     }
@@ -65,19 +71,30 @@ class Price {
         'currency=' + currency)
     }
 
-    if (typeof response.ledgerInfo.assetScale !== number) {
+    if (typeof response.ledgerInfo.assetScale !== 'number') {
       throw new Error('response.ledger_info.asset_scae must be number.')
     }
   }
- 
+
   async fetch (currency, amount) {
     const details = await ILDCP.fetch(this._plugin.sendData.bind(this._plugin))
 
-    if (assetCode === currency) {
+    if (details.assetCode === currency) {
       return this._scaleAmount(amount, details.assetScale)
     }
 
-    const landmarks = (await this._getLandmarks())[currency]
+    const longestMatchingPrefix = Object.keys(await this._getLandmarks())
+      .reduce((agg, e) => {
+        return (details.clientAddress.startsWith(e) && e.length > (agg || '').length) ? e : agg
+      }, null)
+
+    if (longestMatchingPrefix === null) {
+      throw new Error('no landmarks for client address prefix.' +
+        ' clientAddress=' + details.clientAddress +
+        ' landmarks=' + JSON.stringify(this._landmarks))
+    }
+
+    const landmarks = (await this._getLandmarks())[longestMatchingPrefix][currency]
 
     if (!landmarks || !landmarks.length) {
       debug('no landmarks for currency. currency=' + currency,

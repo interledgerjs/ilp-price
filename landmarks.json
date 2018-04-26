@@ -1,5 +1,12 @@
 {
-  "XRP": [
-    "$sharafian.com"
-  ]
+  "g.": {
+    "XRP": [
+      "$sharafian.com"
+    ]
+  },
+  "test.": {
+    "XRP": [
+      "$spsp.ilp-test.com"
+    ]
+  }
 }
