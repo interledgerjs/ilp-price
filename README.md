@@ -153,7 +153,7 @@ If we merge landmark spec B into landmark spec A, we get the following result:
 
 ```js
 {
-  "test.": {
+  "g.": {
     "XRP": [
       "$g.example"
     ],
@@ -162,7 +162,12 @@ If we merge landmark spec B into landmark spec A, we get the following result:
       "$d.example",
       "$e.example"
     ]
-  }
+  },
+  "test.": {
+    "XRP": [
+      "$f.example"
+    ]
+  },
   "private.": {
     "XRP": [
       "$localhost"
