@@ -63,7 +63,7 @@ class Price {
   }
 
   _scaleAmount (amount, scale) {
-    return new BigNumber(amount).times(Math.pow(10, scale)).toString()
+    return new BigNumber(amount).times(Math.pow(10, scale)).toFixed(0)
   }
 
   _validateResponse (currency, response) {
