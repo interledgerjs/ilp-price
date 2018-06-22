@@ -5,7 +5,7 @@ const ILDCP = require('ilp-protocol-ildcp')
 const SPSP = require('ilp-protocol-spsp')
 const PSK2 = require('ilp-protocol-psk2')
 const BigNumber = require('bignumber.js')
-const debug = require('debug')('ilp-price')
+const log = require('ilp-logger')('ilp-price')
 
 class Price {
   constructor (opts = {}) {
@@ -33,28 +33,28 @@ class Price {
     // if file is specified, apply it
     const envFile = process.env.ILP_PRICE_LANDMARKS_FILE
     if (envFile) {
-      debug('loading landmarks from file. file=' + envFile)
+      log.info('loading landmarks from file. file=' + envFile)
       try {
         this.mergeLandmarks(this._landmarks, await fs.readJson(envFile))
       } catch (e) {
-        debug('error loading landmarks from file. error=' + e.message)
+        log.error('error loading landmarks from file. error=' + e.message)
       }
     }
 
     // if env is specified, apply it after file
     const envJson = process.env.ILP_PRICE_LANDMARKS
     if (envJson) {
-      debug('loading landmarks from "ILP_PRICE_LANDMARKS". json=', envJson)
+      log.info('loading landmarks from "ILP_PRICE_LANDMARKS". json=', envJson)
       try {
         this.mergeLandmarks(this._landmarks, JSON.parse(envJson))
       } catch (e) {
-        debug('error loading landmarks from env. error=' + e.message)
+        log.error('error loading landmarks from env. error=' + e.message)
       }
     }
 
     // finally apply constructor opts if available
     if (this._landmarksOpt) {
-      debug('loading landmarks from constructor options')
+      log.info('loading landmarks from constructor options')
       this.mergeLandmarks(this._landmarks, this._landmarksOpt)
     }
 
@@ -108,7 +108,7 @@ class Price {
     const landmarks = (await this._getLandmarks())[longestMatchingPrefix][currency]
 
     if (!landmarks || !landmarks.length) {
-      debug('no landmarks for currency. currency=' + currency,
+      log.error('no landmarks for currency. currency=' + currency,
         'landmarks=', this._landmarks)
       throw new Error('no landmarks for currency. currency=' + currency)
     }
@@ -131,14 +131,14 @@ class Price {
 
         return this._scaleAmount(convertedAmount, response.ledgerInfo.assetScale)
       } catch (e) {
-        debug('landmark lookup failed. falling back to next.',
+        log.error('landmark lookup failed. falling back to next.',
           'landmark=' + landmark,
           'error=' + e.message)
         continue
       }
     }
 
-    debug('all landmarks failed. currency=' + currency,
+    log.error('all landmarks failed. currency=' + currency,
       'landmarks=', landmarks)
     throw new Error('all landmarks failed. currency=' + currency)
   }
